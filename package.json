@@ -1,0 +1,32 @@
+{
+  "name": "stryker-intellij-reporter",
+  "version": "1.0.0",
+  "description": "An IntelliJ IDE Reporter for Stryker Mutation Testing",
+  "main": "src/Progress.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "@stryker-mutator/core": "^2.5.0",
+    "@stryker-mutator/jest-runner": "^2.5.0",
+    "@stryker-mutator/typescript": "^2.5.0",
+    "@types/progress": "^2.0.3",
+    "progress": "^2.0.3",
+    "typescript": "^3.9.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/Garethp/stryker-intellij-reporter.git"
+  },
+  "keywords": [
+    "stryker",
+    "reporter",
+    "intellij"
+  ],
+  "author": "Gareth Parker",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Garethp/stryker-intellij-reporter/issues"
+  },
+  "homepage": "https://github.com/Garethp/stryker-intellij-reporter#readme"
+}
