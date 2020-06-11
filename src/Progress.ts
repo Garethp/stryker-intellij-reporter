@@ -136,10 +136,19 @@ export default class ProgressBarReporter extends ProgressKeeper {
     private readonly out: NodeJS.WritableStream = process.stdout;
     private files: string[] = [];
     private failedMessages: {[fileName: string]: string[]} = {};
+    private workingDirectory = `${process.cwd()}/`;
 
     constructor(private readonly log: any, private readonly options: StrykerOptions) {
         super();
     }
+
+    private makeRelative(fileName: string): string {
+        if (fileName.indexOf(this.workingDirectory) === 0) {
+            return fileName.replace(this.workingDirectory, "");
+        }
+
+        return fileName
+}
 
     public onAllMutantsMatchedWithTests(matchedMutants: readonly MatchedMutant[]): void {
         super.onAllMutantsMatchedWithTests(matchedMutants);
@@ -154,7 +163,7 @@ export default class ProgressBarReporter extends ProgressKeeper {
             return [...results, mutant.fileName];
         }, [])
         for (const mutant of this.files) {
-            this.out.write(`##teamcity[testStarted parentNodeId='0' nodeId='${mutant}' name='${mutant}' running='true']\r\n`)
+            this.out.write(`##teamcity[testStarted parentNodeId='0' nodeId='${mutant}' name='${this.makeRelative(mutant)}' running='true']\r\n`)
         }
 
         this.out.write(`##teamcity[testCount count='${this.progress.total}']`)
@@ -169,7 +178,7 @@ export default class ProgressBarReporter extends ProgressKeeper {
     }
 
     public onMutantTested(result: MutantResult): void {
-        this.out.write(`##teamcity[testStarted parentNodeId='${result.sourceFilePath}' nodeId='${result.sourceFilePath}:${result.id}' name='${result.sourceFilePath}' running='true']\r\n`)
+        this.out.write(`##teamcity[testStarted parentNodeId='${result.sourceFilePath}' nodeId='${result.sourceFilePath}:${result.id}' name='${this.makeRelative(result.sourceFilePath)}' running='true']\r\n`)
 
         if (result.status === MutantStatus.Survived) {
             let message = `${chalk.cyan(result.sourceFilePath)}:${chalk.yellow(result.location.start.line + 1)}:${chalk.yellow(result.location.start.column + 1)}` + "\n"
@@ -185,11 +194,11 @@ export default class ProgressBarReporter extends ProgressKeeper {
                 .replace(/]/g, '|]')
                 .replace(/'/g, "|'")
 
-            this.out.write(`##teamcity[testFailed message='${message}' parentNodeId='${result.sourceFilePath}' nodeId='${result.sourceFilePath}:${result.id}' name='${result.sourceFilePath}']\r\n`)
+            this.out.write(`##teamcity[testFailed message='${message}' parentNodeId='${result.sourceFilePath}' nodeId='${result.sourceFilePath}:${result.id}' name='${this.makeRelative(result.sourceFilePath)}']\r\n`)
             this.failedMessages[result.sourceFilePath] = (this.failedMessages[result.sourceFilePath] || []);
             this.failedMessages[result.sourceFilePath].push(message);
         }
-        else this.out.write(`##teamcity[testFinished parentNodeId='${result.sourceFilePath}' nodeId='${result.sourceFilePath}:${result.id}' name='${result.sourceFilePath}']\r\n`)
+        else this.out.write(`##teamcity[testFinished parentNodeId='${result.sourceFilePath}' nodeId='${result.sourceFilePath}:${result.id}' name='${this.makeRelative(result.sourceFilePath)}']\r\n`)
 
         super.onMutantTested(result);
     }
@@ -197,9 +206,9 @@ export default class ProgressBarReporter extends ProgressKeeper {
     public onAllMutantsTested(results: MutantResult[]) {
         for (const mutant of this.files) {
             if (this.failedMessages[mutant]) {
-                this.out.write(`##teamcity[testFailed parentNodeId='0' nodeId='${mutant}' name='${mutant}' message='']\r\n`)
+                this.out.write(`##teamcity[testFailed parentNodeId='0' nodeId='${mutant}' name='${this.makeRelative(mutant)}' message='']\r\n`)
             }
-             else this.out.write(`##teamcity[testFinished parentNodeId='0' nodeId='${mutant}' name='${mutant}']\r\n`)
+             else this.out.write(`##teamcity[testFinished parentNodeId='0' nodeId='${mutant}' name='${this.makeRelative(mutant)}']\r\n`)
         }
     };
 

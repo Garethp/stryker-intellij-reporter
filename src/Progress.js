@@ -138,8 +138,15 @@ var ProgressBarReporter = /** @class */ (function (_super) {
         _this.out = process.stdout;
         _this.files = [];
         _this.failedMessages = {};
+        _this.workingDirectory = process.cwd() + "/";
         return _this;
     }
+    ProgressBarReporter.prototype.makeRelative = function (fileName) {
+        if (fileName.indexOf(this.workingDirectory) === 0) {
+            return fileName.replace(this.workingDirectory, "");
+        }
+        return fileName;
+    };
     ProgressBarReporter.prototype.onAllMutantsMatchedWithTests = function (matchedMutants) {
         _super.prototype.onAllMutantsMatchedWithTests.call(this, matchedMutants);
         var progressBarContent = 'Mutation testing  [:bar] :percent (elapsed: :et, remaining: :etc) :tested/:total tested (:survived survived, :timedOut timed out)';
@@ -151,7 +158,7 @@ var ProgressBarReporter = /** @class */ (function (_super) {
         }, []);
         for (var _i = 0, _a = this.files; _i < _a.length; _i++) {
             var mutant = _a[_i];
-            this.out.write("##teamcity[testStarted parentNodeId='0' nodeId='" + mutant + "' name='" + mutant + "' running='true']\r\n");
+            this.out.write("##teamcity[testStarted parentNodeId='0' nodeId='" + mutant + "' name='" + this.makeRelative(mutant) + "' running='true']\r\n");
         }
         this.out.write("##teamcity[testCount count='" + this.progress.total + "']");
         this.progressBar = new ProgressBar(progressBarContent, {
@@ -163,7 +170,7 @@ var ProgressBarReporter = /** @class */ (function (_super) {
         });
     };
     ProgressBarReporter.prototype.onMutantTested = function (result) {
-        this.out.write("##teamcity[testStarted parentNodeId='" + result.sourceFilePath + "' nodeId='" + result.sourceFilePath + ":" + result.id + "' name='" + result.sourceFilePath + "' running='true']\r\n");
+        this.out.write("##teamcity[testStarted parentNodeId='" + result.sourceFilePath + "' nodeId='" + result.sourceFilePath + ":" + result.id + "' name='" + this.makeRelative(result.sourceFilePath) + "' running='true']\r\n");
         if (result.status === report_1.MutantStatus.Survived) {
             var message = chalk.cyan(result.sourceFilePath) + ":" + chalk.yellow(result.location.start.line + 1) + ":" + chalk.yellow(result.location.start.column + 1) + "\n";
             message += chalk.red("- " + result.originalLines) + "\n";
@@ -176,22 +183,22 @@ var ProgressBarReporter = /** @class */ (function (_super) {
                 .replace(/\[/g, '|[')
                 .replace(/]/g, '|]')
                 .replace(/'/g, "|'");
-            this.out.write("##teamcity[testFailed message='" + message + "' parentNodeId='" + result.sourceFilePath + "' nodeId='" + result.sourceFilePath + ":" + result.id + "' name='" + result.sourceFilePath + "']\r\n");
+            this.out.write("##teamcity[testFailed message='" + message + "' parentNodeId='" + result.sourceFilePath + "' nodeId='" + result.sourceFilePath + ":" + result.id + "' name='" + this.makeRelative(result.sourceFilePath) + "']\r\n");
             this.failedMessages[result.sourceFilePath] = (this.failedMessages[result.sourceFilePath] || []);
             this.failedMessages[result.sourceFilePath].push(message);
         }
         else
-            this.out.write("##teamcity[testFinished parentNodeId='" + result.sourceFilePath + "' nodeId='" + result.sourceFilePath + ":" + result.id + "' name='" + result.sourceFilePath + "']\r\n");
+            this.out.write("##teamcity[testFinished parentNodeId='" + result.sourceFilePath + "' nodeId='" + result.sourceFilePath + ":" + result.id + "' name='" + this.makeRelative(result.sourceFilePath) + "']\r\n");
         _super.prototype.onMutantTested.call(this, result);
     };
     ProgressBarReporter.prototype.onAllMutantsTested = function (results) {
         for (var _i = 0, _a = this.files; _i < _a.length; _i++) {
             var mutant = _a[_i];
             if (this.failedMessages[mutant]) {
-                this.out.write("##teamcity[testFailed parentNodeId='0' nodeId='" + mutant + "' name='" + mutant + "' message='']\r\n");
+                this.out.write("##teamcity[testFailed parentNodeId='0' nodeId='" + mutant + "' name='" + this.makeRelative(mutant) + "' message='']\r\n");
             }
             else
-                this.out.write("##teamcity[testFinished parentNodeId='0' nodeId='" + mutant + "' name='" + mutant + "']\r\n");
+                this.out.write("##teamcity[testFinished parentNodeId='0' nodeId='" + mutant + "' name='" + this.makeRelative(mutant) + "']\r\n");
         }
     };
     ;

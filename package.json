@@ -1,6 +1,6 @@
 {
   "name": "stryker-intellij-reporter",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "An IntelliJ IDE Reporter for Stryker Mutation Testing",
   "main": "src/Progress.js",
   "scripts": {
