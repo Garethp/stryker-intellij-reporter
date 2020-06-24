@@ -170,26 +170,37 @@ var ProgressBarReporter = /** @class */ (function (_super) {
         });
     };
     ProgressBarReporter.prototype.onMutantTested = function (result) {
-        this.out.write("##teamcity[testStarted parentNodeId='" + result.sourceFilePath + "' nodeId='" + result.sourceFilePath + ":" + result.id + "' name='" + this.makeRelative(result.sourceFilePath) + "' running='true']\r\n");
+        var startLocation = result.location.start.line + 1 + ":" + (result.location.start.column + 1);
+        var endLocation = result.location.end.line + 1 + ":" + (result.location.end.column + 1);
+        var locationHint = "locationHint='stryker-mutant://" + this.makeRelative(result.sourceFilePath) + "::" + startLocation + "::" + endLocation + "'";
+        var parentNode = "parentNodeId='" + result.sourceFilePath + "'";
+        var name = "name='" + this.makeRelative(result.sourceFilePath) + "'";
+        var nodeId = "nodeId='" + result.sourceFilePath + ":" + result.id + "'";
+        var nodeType = "nodeType='test'";
+        var compare = "expected='" + this.escape(result.originalLines) + "' actual='" + this.escape(result.mutatedLines) + "'";
+        this.out.write("##teamcity[testStarted " + parentNode + " " + nodeId + " " + name + " " + locationHint + " " + nodeType + " running='true']\r\n");
         if (result.status === report_1.MutantStatus.Survived) {
             var message = chalk.cyan(result.sourceFilePath) + ":" + chalk.yellow(result.location.start.line + 1) + ":" + chalk.yellow(result.location.start.column + 1) + "\n";
             message += chalk.red("- " + result.originalLines) + "\n";
             message += chalk.green("+ " + result.mutatedLines);
-            message = message
-                .replace(/\|/g, '||')
-                .replace(/\r/g, '|r')
-                .replace(/\n/g, '|n')
-                .replace(/\\/g, '|')
-                .replace(/\[/g, '|[')
-                .replace(/]/g, '|]')
-                .replace(/'/g, "|'");
-            this.out.write("##teamcity[testFailed message='" + message + "' parentNodeId='" + result.sourceFilePath + "' nodeId='" + result.sourceFilePath + ":" + result.id + "' name='" + this.makeRelative(result.sourceFilePath) + "']\r\n");
+            message = this.escape(message);
+            this.out.write("##teamcity[testFailed message='" + message + "' " + parentNode + " " + locationHint + " " + nodeId + " " + name + " " + nodeType + "]\r\n");
             this.failedMessages[result.sourceFilePath] = (this.failedMessages[result.sourceFilePath] || []);
             this.failedMessages[result.sourceFilePath].push(message);
         }
         else
-            this.out.write("##teamcity[testFinished parentNodeId='" + result.sourceFilePath + "' nodeId='" + result.sourceFilePath + ":" + result.id + "' name='" + this.makeRelative(result.sourceFilePath) + "']\r\n");
+            this.out.write("##teamcity[testFinished " + parentNode + " " + locationHint + " " + nodeId + " " + name + " " + nodeType + "]\r\n");
         _super.prototype.onMutantTested.call(this, result);
+    };
+    ProgressBarReporter.prototype.escape = function (message) {
+        return message
+            .replace(/\|/g, '||')
+            .replace(/\r/g, '|r')
+            .replace(/\n/g, '|n')
+            .replace(/\\/g, '|')
+            .replace(/\[/g, '|[')
+            .replace(/]/g, '|]')
+            .replace(/'/g, "|'");
     };
     ProgressBarReporter.prototype.onAllMutantsTested = function (results) {
         for (var _i = 0, _a = this.files; _i < _a.length; _i++) {

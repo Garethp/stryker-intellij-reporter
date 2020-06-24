@@ -178,29 +178,43 @@ export default class ProgressBarReporter extends ProgressKeeper {
     }
 
     public onMutantTested(result: MutantResult): void {
-        this.out.write(`##teamcity[testStarted parentNodeId='${result.sourceFilePath}' nodeId='${result.sourceFilePath}:${result.id}' name='${this.makeRelative(result.sourceFilePath)}' running='true']\r\n`)
+        const startLocation = `${result.location.start.line + 1}:${result.location.start.column + 1}`
+        const endLocation = `${result.location.end.line + 1}:${result.location.end.column + 1}`
+
+        const locationHint = `locationHint='stryker-mutant://${this.makeRelative(result.sourceFilePath)}::${startLocation}::${endLocation}'`
+        const parentNode = `parentNodeId='${result.sourceFilePath}'`
+        const name = `name='${this.makeRelative(result.sourceFilePath)}'`
+        const nodeId = `nodeId='${result.sourceFilePath}:${result.id}'`
+        const nodeType = `nodeType='test'`
+        const compare = `expected='${this.escape(result.originalLines)}' actual='${this.escape(result.mutatedLines)}'`
+
+        this.out.write(`##teamcity[testStarted ${parentNode} ${nodeId} ${name} ${locationHint} ${nodeType} running='true']\r\n`)
 
         if (result.status === MutantStatus.Survived) {
             let message = `${chalk.cyan(result.sourceFilePath)}:${chalk.yellow(result.location.start.line + 1)}:${chalk.yellow(result.location.start.column + 1)}` + "\n"
             message += chalk.red(`- ${result.originalLines}`) + "\n";
             message += chalk.green(`+ ${result.mutatedLines}`);
 
-            message = message
-                .replace(/\|/g, '||')
-                .replace(/\r/g, '|r')
-                .replace(/\n/g, '|n')
-                .replace(/\\/g, '|')
-                .replace(/\[/g, '|[')
-                .replace(/]/g, '|]')
-                .replace(/'/g, "|'")
+            message = this.escape(message)
 
-            this.out.write(`##teamcity[testFailed message='${message}' parentNodeId='${result.sourceFilePath}' nodeId='${result.sourceFilePath}:${result.id}' name='${this.makeRelative(result.sourceFilePath)}']\r\n`)
+            this.out.write(`##teamcity[testFailed message='${message}' ${parentNode} ${locationHint} ${nodeId} ${name} ${nodeType}]\r\n`)
             this.failedMessages[result.sourceFilePath] = (this.failedMessages[result.sourceFilePath] || []);
             this.failedMessages[result.sourceFilePath].push(message);
         }
-        else this.out.write(`##teamcity[testFinished parentNodeId='${result.sourceFilePath}' nodeId='${result.sourceFilePath}:${result.id}' name='${this.makeRelative(result.sourceFilePath)}']\r\n`)
+        else this.out.write(`##teamcity[testFinished ${parentNode} ${locationHint} ${nodeId} ${name} ${nodeType}]\r\n`)
 
         super.onMutantTested(result);
+    }
+
+    private escape(message: string) {
+        return message
+            .replace(/\|/g, '||')
+            .replace(/\r/g, '|r')
+            .replace(/\n/g, '|n')
+            .replace(/\\/g, '|')
+            .replace(/\[/g, '|[')
+            .replace(/]/g, '|]')
+            .replace(/'/g, "|'");
     }
 
     public onAllMutantsTested(results: MutantResult[]) {
