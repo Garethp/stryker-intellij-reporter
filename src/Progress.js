@@ -1,102 +1,84 @@
 "use strict";
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-var __spreadArrays = (this && this.__spreadArrays) || function () {
-    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
-    for (var r = Array(s), k = 0, i = 0; i < il; i++)
-        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
-            r[k] = a[j];
-    return r;
-};
-exports.__esModule = true;
+Object.defineProperty(exports, "__esModule", { value: true });
 exports.strykerPlugins = void 0;
-var plugin_1 = require("@stryker-mutator/api/plugin");
-var report_1 = require("@stryker-mutator/api/report");
-var ProgressBar = require("progress");
-var plugin_2 = require("@stryker-mutator/api/plugin");
-var ClearTextScoreTable_1 = require("@stryker-mutator/core/src/reporters/ClearTextScoreTable");
-var chalk = require("chalk");
-var mutation_testing_metrics_1 = require("mutation-testing-metrics");
-var typed_inject_1 = require("typed-inject");
-var Timer = /** @class */ (function () {
-    function Timer(now) {
-        if (now === void 0) { now = function () { return new Date(); }; }
+const plugin_1 = require("@stryker-mutator/api/plugin");
+const report_1 = require("@stryker-mutator/api/report");
+const ProgressBar = require("progress");
+const plugin_2 = require("@stryker-mutator/api/plugin");
+const ClearTextScoreTable_1 = require("@stryker-mutator/core/src/reporters/ClearTextScoreTable");
+const chalk = require("chalk");
+const mutation_testing_metrics_1 = require("mutation-testing-metrics");
+const typed_inject_1 = require("typed-inject");
+class Timer {
+    constructor(now = () => new Date()) {
         this.now = now;
         this.reset();
     }
-    Timer.prototype.reset = function () {
+    reset() {
         this.markers = Object.create(null);
         this.start = this.now();
-    };
-    Timer.prototype.humanReadableElapsed = function () {
-        var elapsedSeconds = this.elapsedSeconds();
-        return Timer.humanReadableElapsedMinutes(elapsedSeconds) + Timer.humanReadableElapsedSeconds(elapsedSeconds);
-    };
-    Timer.prototype.elapsedSeconds = function () {
-        var elapsedMs = this.elapsedMs();
+    }
+    humanReadableElapsed() {
+        const elapsedSeconds = this.elapsedSeconds();
+        return (Timer.humanReadableElapsedMinutes(elapsedSeconds) +
+            Timer.humanReadableElapsedSeconds(elapsedSeconds));
+    }
+    elapsedSeconds() {
+        const elapsedMs = this.elapsedMs();
         return Math.floor(elapsedMs / 1000);
-    };
-    Timer.prototype.elapsedMs = function (sinceMarker) {
+    }
+    elapsedMs(sinceMarker) {
         if (sinceMarker && this.markers[sinceMarker]) {
             return this.now().getTime() - this.markers[sinceMarker].getTime();
         }
         else {
             return this.now().getTime() - this.start.getTime();
         }
-    };
-    Timer.prototype.mark = function (name) {
+    }
+    mark(name) {
         this.markers[name] = this.now();
-    };
-    Timer.humanReadableElapsedSeconds = function (elapsedSeconds) {
-        var restSeconds = elapsedSeconds % 60;
+    }
+    static humanReadableElapsedSeconds(elapsedSeconds) {
+        const restSeconds = elapsedSeconds % 60;
         if (restSeconds === 1) {
-            return restSeconds + " second";
+            return `${restSeconds} second`;
         }
         else {
-            return restSeconds + " seconds";
+            return `${restSeconds} seconds`;
         }
-    };
-    Timer.humanReadableElapsedMinutes = function (elapsedSeconds) {
-        var elapsedMinutes = Math.floor(elapsedSeconds / 60);
+    }
+    static humanReadableElapsedMinutes(elapsedSeconds) {
+        const elapsedMinutes = Math.floor(elapsedSeconds / 60);
         if (elapsedMinutes > 1) {
-            return elapsedMinutes + " minutes ";
+            return `${elapsedMinutes} minutes `;
         }
         else if (elapsedMinutes > 0) {
-            return elapsedMinutes + " minute ";
+            return `${elapsedMinutes} minute `;
         }
         else {
-            return '';
+            return "";
         }
-    };
-    return Timer;
-}());
-var ProgressKeeper = /** @class */ (function () {
-    function ProgressKeeper() {
+    }
+}
+class ProgressKeeper {
+    constructor() {
         this.progress = {
             survived: 0,
             timedOut: 0,
             tested: 0,
-            total: 0
+            total: 0,
         };
     }
-    ProgressKeeper.prototype.onAllMutantsMatchedWithTests = function (matchedMutants) {
+    onAllMutantsMatchedWithTests(matchedMutants) {
         this.timer = new Timer();
-        this.mutantIdsWithoutCoverage = matchedMutants.filter(function (m) { return !m.runAllTests && m.scopedTestIds.length === 0; }).map(function (m) { return m.id; });
-        this.progress.total = matchedMutants.length - this.mutantIdsWithoutCoverage.length;
-    };
-    ProgressKeeper.prototype.onMutantTested = function (result) {
-        if (!this.mutantIdsWithoutCoverage.some(function (id) { return result.id === id; })) {
+        this.mutantIdsWithoutCoverage = matchedMutants
+            .filter((m) => { var _a; return !m.runAllTests && !((_a = (m.testFilter || m.scopedTestIds)) === null || _a === void 0 ? void 0 : _a.length); })
+            .map((m) => m.id);
+        this.progress.total =
+            matchedMutants.length - this.mutantIdsWithoutCoverage.length;
+    }
+    onMutantTested(result) {
+        if (!this.mutantIdsWithoutCoverage.some((id) => result.id === id)) {
             this.progress.tested++;
         }
         if (result.status === report_1.MutantStatus.Survived) {
@@ -105,130 +87,130 @@ var ProgressKeeper = /** @class */ (function () {
         if (result.status === report_1.MutantStatus.TimedOut) {
             this.progress.timedOut++;
         }
-    };
-    ProgressKeeper.prototype.getElapsedTime = function () {
+    }
+    getElapsedTime() {
         return this.formatTime(this.timer.elapsedSeconds());
-    };
-    ProgressKeeper.prototype.getEtc = function () {
-        var totalSecondsLeft = Math.floor((this.timer.elapsedSeconds() / this.progress.tested) * (this.progress.total - this.progress.tested));
+    }
+    getEtc() {
+        const totalSecondsLeft = Math.floor((this.timer.elapsedSeconds() / this.progress.tested) *
+            (this.progress.total - this.progress.tested));
         if (isFinite(totalSecondsLeft) && totalSecondsLeft > 0) {
             return this.formatTime(totalSecondsLeft);
         }
         else {
-            return 'n/a';
+            return "n/a";
         }
-    };
-    ProgressKeeper.prototype.formatTime = function (timeInSeconds) {
-        var hours = Math.floor(timeInSeconds / 3600);
-        var minutes = Math.floor((timeInSeconds % 3600) / 60);
-        return hours > 0 // conditional time formatting
-            ? "~" + hours + "h " + minutes + "m"
-            : minutes > 0
-                ? "~" + minutes + "m"
-                : '<1m';
-    };
-    return ProgressKeeper;
-}());
-var ProgressBarReporter = /** @class */ (function (_super) {
-    __extends(ProgressBarReporter, _super);
-    function ProgressBarReporter(log, options) {
-        var _this = _super.call(this) || this;
-        _this.log = log;
-        _this.options = options;
-        _this.out = process.stdout;
-        _this.files = [];
-        _this.failedMessages = {};
-        _this.workingDirectory = process.cwd() + "/";
-        return _this;
     }
-    ProgressBarReporter.prototype.makeRelative = function (fileName) {
+    formatTime(timeInSeconds) {
+        const hours = Math.floor(timeInSeconds / 3600);
+        const minutes = Math.floor((timeInSeconds % 3600) / 60);
+        return hours > 0
+            ? `~${hours}h ${minutes}m`
+            : minutes > 0
+                ? `~${minutes}m`
+                : "<1m";
+    }
+}
+class ProgressBarReporter extends ProgressKeeper {
+    constructor(log, options) {
+        super();
+        this.log = log;
+        this.options = options;
+        this.out = process.stdout;
+        this.files = [];
+        this.failedMessages = {};
+        this.workingDirectory = `${process.cwd()}/`;
+    }
+    makeRelative(fileName) {
         if (fileName.indexOf(this.workingDirectory) === 0) {
             return fileName.replace(this.workingDirectory, "");
         }
         return fileName;
-    };
-    ProgressBarReporter.prototype.onAllMutantsMatchedWithTests = function (matchedMutants) {
-        _super.prototype.onAllMutantsMatchedWithTests.call(this, matchedMutants);
-        var progressBarContent = 'Mutation testing  [:bar] :percent (elapsed: :et, remaining: :etc) :tested/:total tested (:survived survived, :timedOut timed out)';
-        this.files = matchedMutants.reduce(function (results, mutant) {
+    }
+    onAllMutantsMatchedWithTests(matchedMutants) {
+        super.onAllMutantsMatchedWithTests(matchedMutants);
+        const progressBarContent = "Mutation testing  [:bar] :percent (elapsed: :et, remaining: :etc) :tested/:total tested (:survived survived, :timedOut timed out)";
+        this.files = matchedMutants.reduce((results, mutant) => {
             if (results.indexOf(mutant.fileName) != -1) {
                 return results;
             }
-            return __spreadArrays(results, [mutant.fileName]);
+            return [...results, mutant.fileName];
         }, []);
-        for (var _i = 0, _a = this.files; _i < _a.length; _i++) {
-            var mutant = _a[_i];
-            this.out.write("##teamcity[testStarted parentNodeId='0' nodeId='" + mutant + "' name='" + this.makeRelative(mutant) + "' running='true']\r\n");
+        for (const mutant of this.files) {
+            this.out.write(`##teamcity[testStarted parentNodeId='0' nodeId='${mutant}' name='${this.makeRelative(mutant)}' running='true']\r\n`);
         }
-        this.out.write("##teamcity[testCount count='" + this.progress.total + "']");
+        this.out.write(`##teamcity[testCount count='${this.progress.total}']`);
         this.progressBar = new ProgressBar(progressBarContent, {
-            complete: '=',
-            incomplete: ' ',
+            complete: "=",
+            incomplete: " ",
             stream: process.stdout,
             total: this.progress.total,
-            width: 50
+            width: 50,
         });
-    };
-    ProgressBarReporter.prototype.onMutantTested = function (result) {
-        var startLocation = result.location.start.line + 1 + ":" + (result.location.start.column + 1);
-        var endLocation = result.location.end.line + 1 + ":" + (result.location.end.column + 1);
-        var locationHint = "locationHint='stryker-mutant://" + this.makeRelative(result.sourceFilePath) + "::" + startLocation + "::" + endLocation + "'";
-        var parentNode = "parentNodeId='" + result.sourceFilePath + "'";
-        var name = "name='" + this.makeRelative(result.sourceFilePath) + "'";
-        var nodeId = "nodeId='" + result.sourceFilePath + ":" + result.id + "'";
-        var nodeType = "nodeType='test'";
-        var compare = "expected='" + this.escape(result.originalLines) + "' actual='" + this.escape(result.mutatedLines) + "'";
-        this.out.write("##teamcity[testStarted " + parentNode + " " + nodeId + " " + name + " " + locationHint + " " + nodeType + " running='true']\r\n");
+    }
+    getSourceFile(mutant) {
+        return mutant.sourceFilePath || mutant.fileName;
+    }
+    onMutantTested(result) {
+        this.out.write(JSON.stringify(result, null, 4));
+        const startLocation = `${result.location.start.line + 1}:${result.location.start.column + 1}`;
+        const endLocation = `${result.location.end.line + 1}:${result.location.end.column + 1}`;
+        const locationHint = `locationHint='stryker-mutant://${this.makeRelative(this.getSourceFile(result))}::${startLocation}::${endLocation}'`;
+        const parentNode = `parentNodeId='${this.getSourceFile(result)}'`;
+        const name = `name='${this.makeRelative(this.getSourceFile(result))}'`;
+        const nodeId = `nodeId='${this.getSourceFile(result)}:${result.id}'`;
+        const nodeType = `nodeType='test'`;
+        const compare = `expected='${this.escape(result.originalLines)}' actual='${this.escape(result.mutatedLines)}'`;
+        this.out.write(`##teamcity[testStarted ${parentNode} ${nodeId} ${name} ${locationHint} ${nodeType} running='true']\r\n`);
         if (result.status === report_1.MutantStatus.Survived) {
-            var message = chalk.cyan(result.sourceFilePath) + ":" + chalk.yellow(result.location.start.line + 1) + ":" + chalk.yellow(result.location.start.column + 1) + "\n";
-            message += chalk.red("- " + result.originalLines) + "\n";
-            message += chalk.green("+ " + result.mutatedLines);
+            let message = `${chalk.cyan(this.getSourceFile(result))}:${chalk.yellow(result.location.start.line + 1)}:${chalk.yellow(result.location.start.column + 1)}` + "\n";
+            message += chalk.red(`- ${result.originalLines}`) + "\n";
+            message += chalk.green(`+ ${result.mutatedLines}`);
             message = this.escape(message);
-            this.out.write("##teamcity[testFailed message='" + message + "' " + parentNode + " " + locationHint + " " + nodeId + " " + name + " " + nodeType + "]\r\n");
-            this.failedMessages[result.sourceFilePath] = (this.failedMessages[result.sourceFilePath] || []);
-            this.failedMessages[result.sourceFilePath].push(message);
+            this.out.write(`##teamcity[testFailed message='${message}' ${parentNode} ${locationHint} ${nodeId} ${name} ${nodeType}]\r\n`);
+            this.failedMessages[this.getSourceFile(result)] =
+                this.failedMessages[this.getSourceFile(result)] || [];
+            this.failedMessages[this.getSourceFile(result)].push(message);
         }
         else
-            this.out.write("##teamcity[testFinished " + parentNode + " " + locationHint + " " + nodeId + " " + name + " " + nodeType + "]\r\n");
-        _super.prototype.onMutantTested.call(this, result);
-    };
-    ProgressBarReporter.prototype.escape = function (message) {
+            this.out.write(`##teamcity[testFinished ${parentNode} ${locationHint} ${nodeId} ${name} ${nodeType}]\r\n`);
+        super.onMutantTested(result);
+    }
+    escape(message) {
         return message
-            .replace(/\|/g, '||')
-            .replace(/\r/g, '|r')
-            .replace(/\n/g, '|n')
-            .replace(/\\/g, '|')
-            .replace(/\[/g, '|[')
-            .replace(/]/g, '|]')
+            .replace(/\|/g, "||")
+            .replace(/\r/g, "|r")
+            .replace(/\n/g, "|n")
+            .replace(/\\/g, "|")
+            .replace(/\[/g, "|[")
+            .replace(/]/g, "|]")
             .replace(/'/g, "|'");
-    };
-    ProgressBarReporter.prototype.onAllMutantsTested = function (results) {
-        for (var _i = 0, _a = this.files; _i < _a.length; _i++) {
-            var mutant = _a[_i];
+    }
+    onAllMutantsTested(results) {
+        for (const mutant of this.files) {
             if (this.failedMessages[mutant]) {
-                this.out.write("##teamcity[testFailed parentNodeId='0' nodeId='" + mutant + "' name='" + this.makeRelative(mutant) + "' message='']\r\n");
+                this.out.write(`##teamcity[testFailed parentNodeId='0' nodeId='${mutant}' name='${this.makeRelative(mutant)}' message='']\r\n`);
             }
             else
-                this.out.write("##teamcity[testFinished parentNodeId='0' nodeId='" + mutant + "' name='" + this.makeRelative(mutant) + "']\r\n");
+                this.out.write(`##teamcity[testFinished parentNodeId='0' nodeId='${mutant}' name='${this.makeRelative(mutant)}']\r\n`);
         }
-    };
-    ;
-    ProgressBarReporter.prototype.onMutationTestReportReady = function (report) {
-        var metricsResult = mutation_testing_metrics_1.calculateMetrics(report.files);
+    }
+    onMutationTestReportReady(report) {
+        const metricsResult = mutation_testing_metrics_1.calculateMetrics(report.files);
         this.out.write("\r\n");
-        this.out.write(new ClearTextScoreTable_1["default"](metricsResult, this.options.thresholds).draw());
+        this.out.write(new ClearTextScoreTable_1.default(metricsResult, this.options.thresholds).draw());
         this.out.write("\r\n\r\n");
-    };
-    ProgressBarReporter.prototype.tick = function (tickObj) {
+    }
+    tick(tickObj) {
         this.progressBar.tick(tickObj);
-    };
-    ProgressBarReporter.prototype.render = function (renderObj) {
+    }
+    render(renderObj) {
         this.progressBar.render(renderObj);
-    };
-    ProgressBarReporter.inject = typed_inject_1.tokens(plugin_1.commonTokens.logger, plugin_1.commonTokens.options);
-    return ProgressBarReporter;
-}(ProgressKeeper));
-exports["default"] = ProgressBarReporter;
+    }
+}
+exports.default = ProgressBarReporter;
+ProgressBarReporter.inject = typed_inject_1.tokens(plugin_1.commonTokens.logger, plugin_1.commonTokens.options);
 exports.strykerPlugins = [
-    plugin_2.declareClassPlugin(plugin_2.PluginKind.Reporter, 'intellij', ProgressBarReporter)
+    plugin_2.declareClassPlugin(plugin_2.PluginKind.Reporter, "intellij", ProgressBarReporter),
 ];
+//# sourceMappingURL=Progress.js.map

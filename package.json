@@ -1,18 +1,21 @@
 {
   "name": "stryker-intellij-reporter",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "An IntelliJ IDE Reporter for Stryker Mutation Testing",
   "main": "src/Progress.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "devDependencies": {
-    "@stryker-mutator/core": "^2.5.0",
-    "@stryker-mutator/jest-runner": "^2.5.0",
-    "@stryker-mutator/typescript": "^2.5.0",
+    "@stryker-mutator/core": "^4.0.0-beta.9",
+    "@stryker-mutator/jest-runner": "^4.0.0-beta.9",
     "@types/progress": "^2.0.3",
+    "prettier": "^2.1.2",
     "progress": "^2.0.3",
-    "typescript": "^3.9.2"
+    "ts-loader": "^8.0.4",
+    "typescript": "^3.9.2",
+    "webpack": "^4.44.2",
+    "webpack-cli": "^3.3.12"
   },
   "repository": {
     "type": "git",
