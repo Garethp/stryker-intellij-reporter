@@ -208,7 +208,6 @@ export default class ProgressBarReporter extends ProgressKeeper {
   }
 
   public onMutantTested(result: MutantResult): void {
-    this.out.write(JSON.stringify(result, null, 4));
     const startLocation = `${result.location.start.line + 1}:${
       result.location.start.column + 1
     }`;
@@ -216,8 +215,8 @@ export default class ProgressBarReporter extends ProgressKeeper {
       result.location.end.column + 1
     }`;
 
-    const locationHint = `locationHint='stryker-mutant://${this.makeRelative(
-      this.getSourceFile(result)
+    const locationHint = `locationHint='stryker-mutant://${this.getSourceFile(
+      result
     )}::${startLocation}::${endLocation}'`;
     const parentNode = `parentNodeId='${this.getSourceFile(result)}'`;
     const name = `name='${this.makeRelative(this.getSourceFile(result))}'`;

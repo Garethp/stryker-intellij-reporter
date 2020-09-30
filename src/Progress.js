@@ -152,7 +152,6 @@ class ProgressBarReporter extends ProgressKeeper {
         return mutant.sourceFilePath || mutant.fileName;
     }
     onMutantTested(result) {
-        this.out.write(JSON.stringify(result, null, 4));
         const startLocation = `${result.location.start.line + 1}:${result.location.start.column + 1}`;
         const endLocation = `${result.location.end.line + 1}:${result.location.end.column + 1}`;
         const locationHint = `locationHint='stryker-mutant://${this.makeRelative(this.getSourceFile(result))}::${startLocation}::${endLocation}'`;
