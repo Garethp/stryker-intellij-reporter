@@ -9,7 +9,7 @@ import { commonTokens } from "@stryker-mutator/api/plugin";
 import { MutantStatus } from "@stryker-mutator/api/report";
 import ProgressBar = require("progress");
 import { declareClassPlugin, PluginKind } from "@stryker-mutator/api/plugin";
-import ClearTextScoreTable from "@stryker-mutator/core/src/reporters/ClearTextScoreTable";
+import ClearTextScoreTable from "@stryker-mutator/core/src/reporters/clear-text-score-table";
 import chalk = require("chalk");
 import { calculateMetrics } from "mutation-testing-metrics";
 import { tokens } from "typed-inject";
@@ -150,7 +150,7 @@ export default class ProgressBarReporter extends ProgressKeeper {
   private progressBar: ProgressBar;
 
   private readonly out: NodeJS.WritableStream = process.stdout;
-  private files: string[] = [];
+  private mutantsPerFile: { [fileName: string]: number } = {};
   private failedMessages: { [fileName: string]: string[] } = {};
   private workingDirectory = `${process.cwd()}/`;
 
@@ -176,18 +176,21 @@ export default class ProgressBarReporter extends ProgressKeeper {
     const progressBarContent =
       "Mutation testing  [:bar] :percent (elapsed: :et, remaining: :etc) :tested/:total tested (:survived survived, :timedOut timed out)";
 
-    this.files = matchedMutants.reduce((results, mutant) => {
-      if (results.indexOf(mutant.fileName) != -1) {
+    this.mutantsPerFile = matchedMutants.reduce((results, mutant) => {
+      if (results[mutant.fileName] !== undefined) {
+        results[mutant.fileName]++;
         return results;
       }
 
-      return [...results, mutant.fileName];
-    }, []);
-    for (const mutant of this.files) {
+      results[mutant.fileName] = 1;
+      return results;
+    }, {} as { [fileName: string]: number });
+
+    for (const files of Object.keys(this.mutantsPerFile)) {
       this.out.write(
-        `##teamcity[testStarted parentNodeId='0' nodeId='${mutant}' name='${this.makeRelative(
-          mutant
-        )}' running='true']\r\n`
+        `##teamcity[testStarted parentNodeId='0' nodeId='${files}' name='${this.makeRelative(
+          files
+        )}']\r\n`
       );
     }
 
@@ -202,7 +205,7 @@ export default class ProgressBarReporter extends ProgressKeeper {
     });
   }
 
-  private getSourceFile(mutant: MutantResult): string {
+  private getSourceFile(mutant: MutantResult | MatchedMutant): string {
     //@ts-ignore
     return mutant.sourceFilePath || mutant.fileName;
   }
@@ -250,6 +253,7 @@ export default class ProgressBarReporter extends ProgressKeeper {
       this.out.write(
         `##teamcity[testFinished ${parentNode} ${locationHint} ${nodeId} ${name} ${nodeType}]\r\n`
       );
+    this.markMutantTested(result);
 
     super.onMutantTested(result);
   }
@@ -265,20 +269,23 @@ export default class ProgressBarReporter extends ProgressKeeper {
       .replace(/'/g, "|'");
   }
 
-  public onAllMutantsTested(results: MutantResult[]) {
-    for (const mutant of this.files) {
-      if (this.failedMessages[mutant]) {
-        this.out.write(
-          `##teamcity[testFailed parentNodeId='0' nodeId='${mutant}' name='${this.makeRelative(
-            mutant
-          )}' message='']\r\n`
-        );
-      } else
-        this.out.write(
-          `##teamcity[testFinished parentNodeId='0' nodeId='${mutant}' name='${this.makeRelative(
-            mutant
-          )}']\r\n`
-        );
+  private markMutantTested(result: MutantResult) {
+    const parentFile = this.getSourceFile(result);
+    this.mutantsPerFile[parentFile]--;
+    if (this.mutantsPerFile[parentFile] > 0) return;
+
+    if (this.failedMessages[parentFile]) {
+      this.out.write(
+        `##teamcity[testFailed parentNodeId='0' nodeId='${parentFile}' name='${this.makeRelative(
+          parentFile
+        )}' message='']\r\n`
+      );
+    } else {
+      this.out.write(
+        `##teamcity[testFinished parentNodeId='0' nodeId='${parentFile}' name='${this.makeRelative(
+          parentFile
+        )}']\r\n`
+      );
     }
   }
 
