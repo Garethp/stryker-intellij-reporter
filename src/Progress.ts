@@ -218,9 +218,9 @@ export default class ProgressBarReporter extends ProgressKeeper {
       result.location.end.column + 1
     }`;
 
-    const locationHint = `locationHint='stryker-mutant://${this.getSourceFile(
-      result
-    )}::${startLocation}::${endLocation}'`;
+    const locationHint = `locationHint='stryker-mutant://${
+      result.mutatorName
+    }/${this.getSourceFile(result)}::${startLocation}::${endLocation}'`;
     const parentNode = `parentNodeId='${this.getSourceFile(result)}'`;
     const name = `name='${this.makeRelative(this.getSourceFile(result))}'`;
     const nodeId = `nodeId='${this.getSourceFile(result)}:${result.id}'`;
