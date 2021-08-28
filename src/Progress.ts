@@ -1,24 +1,18 @@
-import { Reporter, SourceFile } from "@stryker-mutator/api/report";
 import {
-  StrykerOptions,
+  MatchedMutant,
   MutantResult,
-  MutantStatus,
-  schema,
-  MutantTestCoverage,
-  Position,
-  Location,
-} from "@stryker-mutator/api/core";
+  Reporter,
+  mutationTestReportSchema,
+} from "@stryker-mutator/api/report";
+import { StrykerOptions } from "@stryker-mutator/api/core";
 import { commonTokens } from "@stryker-mutator/api/plugin";
+import { MutantStatus } from "@stryker-mutator/api/report";
 import ProgressBar = require("progress");
 import { declareClassPlugin, PluginKind } from "@stryker-mutator/api/plugin";
 import { ClearTextScoreTable } from "@stryker-mutator/core/dist/src/reporters/clear-text-score-table";
 import chalk = require("chalk");
+import { calculateMetrics } from "mutation-testing-metrics";
 import { tokens } from "typed-inject";
-import {
-  FileUnderTestModel,
-  MutantModel,
-  MutationTestMetricsResult,
-} from "mutation-testing-metrics";
 
 class Timer {
   private readonly now: () => Date;
@@ -95,7 +89,7 @@ abstract class ProgressKeeper implements Reporter {
   private mutantIdsWithoutCoverage: string[];
 
   public onAllMutantsMatchedWithTests(
-    matchedMutants: readonly MutantTestCoverage[]
+    matchedMutants: readonly MatchedMutant[]
   ): void {
     this.timer = new Timer();
     this.mutantIdsWithoutCoverage = matchedMutants
@@ -115,7 +109,7 @@ abstract class ProgressKeeper implements Reporter {
     if (result.status === MutantStatus.Survived) {
       this.progress.survived++;
     }
-    if (result.status === MutantStatus.Timeout) {
+    if (result.status === MutantStatus.TimedOut) {
       this.progress.timedOut++;
     }
   }
@@ -150,10 +144,7 @@ abstract class ProgressKeeper implements Reporter {
   }
 }
 
-export default class ProgressBarReporter
-  extends ProgressKeeper
-  implements Reporter
-{
+export default class ProgressBarReporter extends ProgressKeeper {
   public static inject = tokens(commonTokens.logger, commonTokens.options);
 
   private progressBar: ProgressBar;
@@ -179,7 +170,7 @@ export default class ProgressBarReporter
   }
 
   public onAllMutantsMatchedWithTests(
-    matchedMutants: readonly MutantTestCoverage[]
+    matchedMutants: readonly MatchedMutant[]
   ): void {
     super.onAllMutantsMatchedWithTests(matchedMutants);
     const progressBarContent =
@@ -214,94 +205,57 @@ export default class ProgressBarReporter
     });
   }
 
-  private getSourceFile(mutant: MutantResult | MutantTestCoverage): string {
+  private getSourceFile(mutant: MutantResult | MatchedMutant): string {
     //@ts-ignore
     return mutant.sourceFilePath || mutant.fileName;
   }
 
-  protected sourceFiles: Record<string, FileUnderTestModel> = {};
-
-  public onSourceFileRead(file: Readonly<SourceFile>): void {
-    this.sourceFiles[file.path] = new FileUnderTestModel(
-      {
-        source: file.content,
-        language: "test",
-        mutants: [],
-      },
-      file.path
-    );
-  }
-
-  private toLocation(location: Location): schema.Location {
-    return {
-      end: this.toPosition(location.end),
-      start: this.toPosition(location.start),
-    };
-  }
-
-  private toPosition(pos: Position): schema.Position {
-    return {
-      column: pos.column + 1, // convert from 0-based to 1-based
-      line: pos.line + 1,
-    };
-  }
-
   public onMutantTested(result: MutantResult): void {
-    const resultModel = new MutantModel(result);
-    resultModel.location = this.toLocation(result.location);
-    resultModel.sourceFile = this.sourceFiles[result.fileName];
-    const startLocation = `${resultModel.location.start.line}:${resultModel.location.start.column}`;
-    const endLocation = `${resultModel.location.end.line}:${resultModel.location.end.column}`;
+    const startLocation = `${result.location.start.line + 1}:${
+      result.location.start.column + 1
+    }`;
+    const endLocation = `${result.location.end.line + 1}:${
+      result.location.end.column + 1
+    }`;
 
     const locationHint = `locationHint='stryker-mutant://${this.getSourceFile(
-      resultModel
+      result
     )}::${startLocation}::${endLocation}'`;
-    const parentNode = `parentNodeId='${this.getSourceFile(resultModel)}'`;
-    const name = `name='${this.makeRelative(this.getSourceFile(resultModel))}'`;
-    const nodeId = `nodeId='${this.getSourceFile(resultModel)}:${
-      resultModel.id
-    }'`;
+    const parentNode = `parentNodeId='${this.getSourceFile(result)}'`;
+    const name = `name='${this.makeRelative(this.getSourceFile(result))}'`;
+    const nodeId = `nodeId='${this.getSourceFile(result)}:${result.id}'`;
     const nodeType = `nodeType='test'`;
+    const compare = `expected='${this.escape(
+      result.originalLines
+    )}' actual='${this.escape(result.mutatedLines)}'`;
 
     this.out.write(
       `##teamcity[testStarted ${parentNode} ${nodeId} ${name} ${locationHint} ${nodeType} running='true']\r\n`
     );
 
-    if (resultModel.status === MutantStatus.Survived) {
+    if (result.status === MutantStatus.Survived) {
       let message =
-        `${chalk.cyan(this.getSourceFile(resultModel))}:${chalk.yellow(
-          resultModel.location.start.line
-        )}:${chalk.yellow(resultModel.location.start.column)}` + "\n";
-
-      resultModel
-        .getOriginalLines()
-        .split("\n")
-        .filter(Boolean)
-        .forEach((line) => (message += chalk.red(`- ${line}`)));
-
-      message += "\n";
-
-      resultModel
-        .getMutatedLines()
-        .split("\n")
-        .filter(Boolean)
-        .forEach((line) => (message += chalk.green(`+ ${line}`)));
+        `${chalk.cyan(this.getSourceFile(result))}:${chalk.yellow(
+          result.location.start.line + 1
+        )}:${chalk.yellow(result.location.start.column + 1)}` + "\n";
+      message += chalk.red(`- ${result.originalLines}`) + "\n";
+      message += chalk.green(`+ ${result.mutatedLines}`);
 
       message = this.escape(message);
 
       this.out.write(
         `##teamcity[testFailed message='${message}' ${parentNode} ${locationHint} ${nodeId} ${name} ${nodeType}]\r\n`
       );
-      this.failedMessages[this.getSourceFile(resultModel)] =
-        this.failedMessages[this.getSourceFile(resultModel)] || [];
-      this.failedMessages[this.getSourceFile(resultModel)].push(message);
+      this.failedMessages[this.getSourceFile(result)] =
+        this.failedMessages[this.getSourceFile(result)] || [];
+      this.failedMessages[this.getSourceFile(result)].push(message);
     } else
       this.out.write(
         `##teamcity[testFinished ${parentNode} ${locationHint} ${nodeId} ${name} ${nodeType}]\r\n`
       );
-    this.markMutantTested(resultModel);
+    this.markMutantTested(result);
 
-    super.onMutantTested(resultModel);
+    super.onMutantTested(result);
   }
 
   private escape(message: string) {
@@ -335,18 +289,13 @@ export default class ProgressBarReporter
     }
   }
 
-  // @ts-ignore
   public onMutationTestReportReady(
-    report: Readonly<schema.MutationTestResult>,
-    metrics: Readonly<MutationTestMetricsResult>
-  ): void {
+    report: mutationTestReportSchema.MutationTestResult
+  ) {
+    const metricsResult = calculateMetrics(report.files);
     this.out.write("\r\n");
     this.out.write(
-      new ClearTextScoreTable(
-        // @ts-ignore
-        metrics.systemUnderTestMetrics,
-        this.options.thresholds
-      ).draw()
+      new ClearTextScoreTable(metricsResult, this.options.thresholds).draw()
     );
     this.out.write("\r\n\r\n");
   }
@@ -361,6 +310,5 @@ export default class ProgressBarReporter
 }
 
 export const strykerPlugins = [
-  // @ts-ignore
   declareClassPlugin(PluginKind.Reporter, "intellij", ProgressBarReporter),
 ];
