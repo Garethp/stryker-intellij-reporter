@@ -253,9 +253,9 @@ export default class ProgressBarReporter
     const startLocation = `${resultModel.location.start.line}:${resultModel.location.start.column}`;
     const endLocation = `${resultModel.location.end.line}:${resultModel.location.end.column}`;
 
-    const locationHint = `locationHint='stryker-mutant://${this.getSourceFile(
-      resultModel
-    )}::${startLocation}::${endLocation}'`;
+    const locationHint = `locationHint='stryker-mutant://${
+      result.mutatorName
+    }/${this.getSourceFile(resultModel)}::${startLocation}::${endLocation}'`;
     const parentNode = `parentNodeId='${this.getSourceFile(resultModel)}'`;
     const name = `name='${this.makeRelative(this.getSourceFile(resultModel))}'`;
     const nodeId = `nodeId='${this.getSourceFile(resultModel)}:${
